@@ -12,8 +12,8 @@
 
 #include <DebouncedButton.h>
 #include <JoystickButton.h>
-#include <MotorSensor.h>
-#include <ButtonSensor.h>
+#include <TriggerSensor.h>
+#include <DirectionButtonSensor.h>
 #include <DistanceSensor.h>
 #include <MotorManager.h>
 #include <SonarDistanceDevice.h>
@@ -57,10 +57,10 @@ SonarDistanceDevice sonar(distanceTriggerPin, distanceEchoPin, 30);
 */
 #define backEndSensorPin 11 // the number of the pushbutton pin of the backend sensor
 #define frontEndSensorPin 7 // the number of the pushbutton pin of the front end sensor
-ButtonSensor backEndSensor(0, "START", SensorType::Trigger, SensorTriggerType::ForceStop, SensorTriggerDirection::Backward, backEndSensorPin, INPUT_PULLUP);
-ButtonSensor frontEndSensor(1, "END", SensorType::Trigger, SensorTriggerType::ForceStop, SensorTriggerDirection::Forward, frontEndSensorPin, INPUT_PULLUP);
+DirectionButtonSensor backEndSensor(0, "START", SensorType::Trigger, SensorTriggerType::Force, SensorTriggerDirection::Backward, backEndSensorPin, INPUT_PULLUP);
+DirectionButtonSensor frontEndSensor(1, "END", SensorType::Trigger, SensorTriggerType::Force, SensorTriggerDirection::Forward, frontEndSensorPin, INPUT_PULLUP);
 
-MotorSensor **defaultSensors = new MotorSensor *[2]
+DirectionTriggerSensor **defaultSensors = new DirectionTriggerSensor *[2]
 {
   &backEndSensor, &frontEndSensor
 };
@@ -109,6 +109,10 @@ CockpitControlsCommander commander(&mManager, &inputManager, &settingsManager);
 #define DATA_HZ 1000 / 60
 
 long lastDataSend = 0;
+
+void onPositionReached(uint16_t index);
+void onSensorReached(DirectionTriggerSensor *sensor);
+
 
 void initPedalPosition()
 {
@@ -168,11 +172,11 @@ void onPositionReached(uint16_t index)
   commander.sendEvent(CockpitControlsEvents::POS_REACHED, String(index, DEC));
 }
 
-void onSensorReached(MotorSensor *sensor)
+void onSensorReached(DirectionTriggerSensor *sensor)
 {
   if (sensor->getType() == SensorType::Trigger)
   {
-    if (sensor->getTriggerType() == SensorTriggerType::ForceStop)
+    if (sensor->getTriggerType() == SensorTriggerType::Force)
     {
       if (sensor->getTriggerDirection() == SensorTriggerDirection::Forward)
       {

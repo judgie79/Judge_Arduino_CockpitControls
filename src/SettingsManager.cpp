@@ -3,6 +3,7 @@
 SettingsManager::SettingsManager()
 : dataStore()
 {
+    
 }
 
 void SettingsManager::settingsChangeCallback(SettingsChanged settingsChanged)
@@ -26,7 +27,7 @@ CockpitControlSettings SettingsManager::resetSettings()
 
 CockpitControlSettings SettingsManager::writeSettings(CockpitControlSettings settings)
 {
-
+    dataStore.begin("cockpit",false);
     dataStore.putBool(settings.autoSendDataAddress, settings.autoSendData);
     dataStore.putUInt(settings.defaultPosAddress, settings.defaultPos);
     dataStore.putUInt(settings.stepCountAddress, settings.stepCount);
@@ -36,6 +37,7 @@ CockpitControlSettings SettingsManager::writeSettings(CockpitControlSettings set
         const char* temp = String(settings.stepsStartAddress + String(i)).c_str();
          dataStore.putUInt(temp, settings.steps[i]);
      }
+     dataStore.end();
 
      if (this->settingsChanged != nullptr)
      {
@@ -50,14 +52,20 @@ CockpitControlSettings SettingsManager::loadSettings()
     
     CockpitControlSettings settings;
   //  LOGD_INFO("SettingsManager::loadSettings1");
+
+    dataStore.begin("cockpit",true);
     settings.settingsStored = dataStore.getBool(settings.settingsStoredAddress);
+    dataStore.end();
 
     if (!settings.settingsStored)
     {
         writeSettings(settings);
+        dataStore.begin("cockpit",false);
         dataStore.putBool(settings.settingsStoredAddress, true);
         settings.settingsStored = true;
+        dataStore.end();
     } else {
+            dataStore.begin("cockpit",true);
         settings.autoSendData = dataStore.getBool(settings.autoSendDataAddress);
         settings.defaultPos = dataStore.getUInt(settings.defaultPosAddress);
         settings.stepCount = dataStore.getUInt(settings.stepCountAddress);
@@ -68,6 +76,7 @@ CockpitControlSettings SettingsManager::loadSettings()
             const char* temp = String(settings.stepsStartAddress + String(i)).c_str();
             settings.steps[i] = dataStore.getUInt(temp);
         }
+        dataStore.end();
         
     }
 
