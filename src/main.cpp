@@ -9,6 +9,7 @@
 #include <DebugOut.h>
 
 #include <Wire.h>
+#include <UniversalGamepad.h>
 
 #include <DebouncedButton.h>
 #include <JoystickButton.h>
@@ -21,7 +22,7 @@
 #include <Commander.h>
 #include "CockpitControlCommands.h"
 #include "CockpitControlsCommander.h"
-//#include "InputManager.h"
+// #include "InputManager.h"
 #include "SettingsManager.h"
 #include "CockpitControlSettings.h"
 
@@ -38,12 +39,24 @@
 bool motorInitialized = false;
 bool handleInputManager = false;
 
+
+#if defined(__USE_JOYSTICK_)
+#if defined(__USE_JOYSTICK_) && defined(__USE_LEONARDO)
+Joystick_ _gamepad;
+#elif defined(__USE_JOYSTICK_) && defined(__USE_USB_JOYSTICK)
+USBHIDGamepad _gamepad;
+#elif defined(__USE_JOYSTICK_) && defined(__USE_BLE_JOYSTICK)
+BleGamepad _gamepad;
+#endif
+UniversalGamepad gamepad(&_gamepad);
+#endif
 DebouncedButton modeSelectButton(modeSelectButtonPin, INPUT_PULLUP);
 DebouncedButton forwardButton(forwardButtonPin, INPUT_PULLUP);
 DebouncedButton reverseButton(reverseButtonPin, INPUT_PULLUP);
 
 DebouncedButton pos1Button(pos1ButtonPin, INPUT_PULLUP);
 DebouncedButton pos2Button(pos2ButtonPin, INPUT_PULLUP);
+
 
 /*
     DISTANCE MEASURE
@@ -65,42 +78,45 @@ DirectionTriggerSensor **defaultSensors = new DirectionTriggerSensor *[2]
   &backEndSensor, &frontEndSensor
 };
 
-#define R_EN 17  // the number of the R_EN pin connected to the motor
-#define L_EN 18  // the number of the L_EN pin connected to the motor
+#define R_EN 17 // the number of the R_EN pin connected to the motor
+#define L_EN 18 // the number of the L_EN pin connected to the motor
 
-#define R_PWM 36  // the number of the R_PWM pin connected to the motor
+#define R_PWM 36 // the number of the R_PWM pin connected to the motor
 #define L_PWM 37 // the number of the L_PWM pin connected to the motor
 
-//SensorManager sManager(defaultSensors, 3, &sonar);
+// SensorManager sManager(defaultSensors, 3, &sonar);
 MotorManager mManager(L_EN, R_EN, L_PWM, R_PWM, defaultSensors, 2, &sonar);
 
-//uint16_t steps[2] = { 7, 15 };
-//const int defaultPos = 0;
+// uint16_t steps[2] = { 7, 15 };
+// const int defaultPos = 0;
 SettingsManager settingsManager;
 CockpitControlSettings settings;
 
 /*
     DIRECT INPUT CONTROLS
 */
+#if defined(__USE_JOYSTICK_)
+InputManager inputManager(&mManager, &gamepad, &modeSelectButton, &forwardButton, &reverseButton, &pos1Button, &pos2Button);
+#else
 InputManager inputManager(&mManager, &modeSelectButton, &forwardButton, &reverseButton, &pos1Button, &pos2Button);
+#endif
 
 CommandStream cmdStream(new char[14]{
-                      (char)CommandKey::HELLO,
-                      (char)CommandKey::ALREADY_CONNECTED,
-                      (char)CommandKey::DEBUG,
-                      (char)CommandKey::ERROR,
-                      (char)CommandKey::RECEIVED,
-                      (char)CommandKey::BYE,
-                      (char)CockpitControlsCommandKey::DATA,
-                      (char)CockpitControlsCommandKey::GETPOSITIONS,
-                      (char)CockpitControlsCommandKey::SETPOSITIONS,
-                      (char)CockpitControlsCommandKey::GOTOPOSITION,
-                      (char)CockpitControlsCommandKey::MOTORSPEED,
-                      (char)CockpitControlsCommandKey::RESETSETTINGS,
-                      (char)CockpitControlsCommandKey::GETSETTINGS,
-                      (char)CockpitControlsCommandKey::SETSETTINGS
-                      },
-                  14);
+                            (char)CommandKey::HELLO,
+                            (char)CommandKey::ALREADY_CONNECTED,
+                            (char)CommandKey::DEBUG,
+                            (char)CommandKey::ERROR,
+                            (char)CommandKey::RECEIVED,
+                            (char)CommandKey::BYE,
+                            (char)CockpitControlsCommandKey::DATA,
+                            (char)CockpitControlsCommandKey::GETPOSITIONS,
+                            (char)CockpitControlsCommandKey::SETPOSITIONS,
+                            (char)CockpitControlsCommandKey::GOTOPOSITION,
+                            (char)CockpitControlsCommandKey::MOTORSPEED,
+                            (char)CockpitControlsCommandKey::RESETSETTINGS,
+                            (char)CockpitControlsCommandKey::GETSETTINGS,
+                            (char)CockpitControlsCommandKey::SETSETTINGS},
+                        14);
 /*
     COMMANDS FROM SERIAL BUS
 */
@@ -113,10 +129,9 @@ long lastDataSend = 0;
 void onPositionReached(uint16_t index);
 void onSensorReached(DirectionTriggerSensor *sensor);
 
-
 void initPedalPosition()
 {
-  
+
   mManager.read();
   if (!mManager.initPositions())
   {
@@ -147,20 +162,25 @@ void setup()
 {
   Serial.begin(115200);
   delay(2000);
+
+#if defined(__USE_JOYSTICK_)
+  gamepad.begin();
+#endif
+
   settings = settingsManager.loadSettings();
   mManager.begin(settings.steps, settings.stepCount);
 
-  while(!motorInitialized)
+  while (!motorInitialized)
   {
     initPedalPosition();
   }
   cmdStream.setOutput(&Serial);
-   inputManager.Begin(&cmdStream);
-   commander.begin(&cmdStream);
-   mManager.addPositionListener(&onPositionReached);
-   mManager.addSensorListener(&onSensorReached);
+  inputManager.Begin(&cmdStream);
+  commander.begin(&cmdStream);
+  mManager.addPositionListener(&onPositionReached);
+  mManager.addSensorListener(&onSensorReached);
 
-   modeSelectButton.setChangeCallback(&onModeSelect);
+  modeSelectButton.setChangeCallback(&onModeSelect);
 
   settingsManager.settingsChangeCallback(&onSettingsChange);
   LOGD_INFO("ready");
@@ -181,7 +201,8 @@ void onSensorReached(DirectionTriggerSensor *sensor)
       if (sensor->getTriggerDirection() == SensorTriggerDirection::Forward)
       {
         commander.sendEvent(CockpitControlsEvents::FRONT_REACHED, String(sensor->getId(), DEC));
-      } else if (sensor->getTriggerDirection() == SensorTriggerDirection::Backward)
+      }
+      else if (sensor->getTriggerDirection() == SensorTriggerDirection::Backward)
       {
         commander.sendEvent(CockpitControlsEvents::BACK_REACHED, String(sensor->getId(), DEC));
       }
@@ -191,7 +212,7 @@ void onSensorReached(DirectionTriggerSensor *sensor)
 
 void loop()
 {
-    commander.read();
+  commander.read();
   mManager.read();
   inputManager.Read();
 
@@ -201,98 +222,15 @@ void loop()
   }
   else
   {
-     mManager.move();
+    mManager.move();
   }
   if (commander.isConnected())
   {
     if ((millis() - lastDataSend >= DATA_HZ) && autoSendData)
-     {
-       commander.sendData();
+    {
+      commander.sendData();
 
-       lastDataSend = millis();
-     }
-   }
+      lastDataSend = millis();
+    }
+  }
 }
-
-
-
-
-
-
-
-// // /*
-// //     DATASTORE AND SETTINGS
-// // */
-// //EEPROMDataStore dataStore;
-
-
-
-
-
-
-
-// #define DATA_HZ 1000 / 60
-
-// long lastDataSend = 0;
-
-// void setup()
-// {
-//    Serial.begin(115200);
-//     delay(2000);
-//     LOGD_INFO("Starting");
-//     //DebugOut.setLogLevel(LogLevel::Debug);
-//     //DebugOut.setOutput(&Serial);
-//     //DebugOut.enable();
-//     // put your setup code here, to run once:
-//   //  dataStore.begin();
-//     // modeSelectButton.setChangeCallback(&onModeSelect);
-
-//   settingsManager.settingsChangeCallback(&onSettingsChange);
-
-//   CockpitControlSettings loadedSettings = settingsManager.loadSettings();
-//   mManager.begin(loadedSettings.steps, loadedSettings.stepCount);
-//   //  cmdStream.setOutput(&Serial);
-//   //  inputManager.Begin(&cmdStream);
-//   //  commander.begin(&cmdStream);
-//     LOGD_INFO("Started");
-// }
-
-// void loop()
-// {
-//   if (!motorInitialized)
-//   {
-//     initPedalPosition();
-//     return;
-//   }
-
-//   // commander.read();
-//   mManager.read();
-//   // inputManager.Read();
-
-//   // if (handleInputManager)
-//   // {
-//   //   inputManager.HandleInputs();
-//   // }
-//   // else
-//   // {
-//      mManager.move();
-//   // }
-//   // if (commander.isConnected() && autoSendData)
-//   // {
-//   //   if (millis() - lastDataSend >= DATA_HZ)
-//   //   {
-//   //     // send status
-//   //     String data =
-//   //         String(CommandValueSeparator) +
-//   //         String(CommandValueSeparator) +
-//   //         String(CommandValueSeparator) +
-//   //         String(inputManager.GetButtonMode());
-
-//   //     cmdStream.writeCommand((char)CockpitControlsCommandKey::DATA, data);
-
-//   //     lastDataSend = millis();
-//   //   }
-//   // }
-// }
-
-

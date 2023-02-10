@@ -1,17 +1,23 @@
 #include "InputManager.h"
 
-
-InputManager::InputManager(MotorManager *motorManager, 
+InputManager::InputManager(MotorManager *motorManager,
     DebouncedButton *modeSelectButton, DebouncedButton *forwardButton, DebouncedButton *reverseButton, 
     DebouncedButton *pos1Button, DebouncedButton *pos2Button)
-{
-    
+{  
     this->motorManager = motorManager;
     this->modeSelectButton = modeSelectButton;
     this->forwardButton = forwardButton;
     this->reverseButton = reverseButton;
     this->pos1Button = pos1Button;
     this->pos2Button = pos2Button;
+}
+
+InputManager::InputManager(MotorManager *motorManager, UniversalGamepad *gamepad,
+    DebouncedButton *modeSelectButton, DebouncedButton *forwardButton, DebouncedButton *reverseButton, 
+    DebouncedButton *pos1Button, DebouncedButton *pos2Button)
+    : InputManager(motorManager, modeSelectButton, forwardButton, reverseButton, pos1Button, pos2Button)
+{
+    this->gamepad = gamepad;
 }
 
 void InputManager::Begin(CommandStream *serialCommand)
@@ -21,38 +27,35 @@ void InputManager::Begin(CommandStream *serialCommand)
 
 void InputManager::HandleInputs()
 {
+    if (this->gamepad == nullptr)
+    return;
+
   if (motorManager->currentDirection() == Direction::FORWARD)
   {
-#ifdef __USE_JOYSTICK_
-     Joystick.setButton(0, 1);
-     Joystick.setButton(1, 0);
-#endif
+    gamepad->press(1);
+    gamepad->release(0);
    }
    else if (motorManager->currentDirection() == Direction::BACKWARD)
    {
-#ifdef __USE_JOYSTICK_
-     Joystick.setButton(0, 0);
-     Joystick.setButton(1, 1);
-#endif
+    gamepad->press(1);
+    gamepad->release(0);
    }
    else
   {
-#ifdef __USE_JOYSTICK_
-      Joystick.setButton(0, 0);
-      Joystick.setButton(1, 0);
+        gamepad->press(0);
+        gamepad->release(0);
 
-      if (pos1Button->pressDownStarted) {
-          Joystick.setButton(2, 1);
+        if (pos1Button->pressDownStarted()) {
+          gamepad->press(2);
       } else if (pos1Button->wasReleased()) {
-          Joystick.setButton(2, 0);
+          gamepad->release(2);
       }
 
-      if (pos2Button->pressDownStarted) {
-          Joystick.setButton(3, 1);
+      if (pos2Button->pressDownStarted()) {
+          gamepad->press(3);
       } else if (pos2Button->wasReleased()) {
-          Joystick.setButton(3, 0);
+          gamepad->release(3);
       }
-#endif
   }
 }
 

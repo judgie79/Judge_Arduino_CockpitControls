@@ -5,12 +5,16 @@
 #include <CommandStream.h>
 #include <DebouncedButton.h>
 #include <MotorManager.h>
+#include <UniversalGamepad.h>
 #include "CockpitControlCommands.h"
 
 class InputManager
 {
 public:
     InputManager(MotorManager *motorManager,
+                DebouncedButton *modeSelectButton, DebouncedButton *forwardButton, DebouncedButton *reverseButton,
+                DebouncedButton *pos1Button, DebouncedButton *pos2Button);
+    InputManager(MotorManager *motorManager, UniversalGamepad *gamepad,
                 DebouncedButton *modeSelectButton, DebouncedButton *forwardButton, DebouncedButton *reverseButton,
                 DebouncedButton *pos1Button, DebouncedButton *pos2Button);
 
@@ -33,6 +37,7 @@ private:
     DebouncedButton *reverseButton = nullptr;
     DebouncedButton *pos1Button = nullptr;
     DebouncedButton *pos2Button = nullptr;
+    UniversalGamepad *gamepad = nullptr;
 
     CommandStream *serialCmd = nullptr;
     MotorManager *motorManager = nullptr;
