@@ -22,32 +22,32 @@ public:
 
 	CockpitControlsCommander(MotorManager* motorManager, InputManager* inputManager, SettingsManager* settingsManager);
 	void sendData();
-	void sendEvent(CockpitControlsEvents event, String eventData);
+	void sendEvent(CockpitControlsEvents event, const char * eventData);
 protected:
 
-	void readCmd(char key, String data);
+	void readCmd(char key, const char * data, uint8_t valueLength);
 private:
 	MotorManager* motorManager;
 	InputManager* inputManager;
 	SettingsManager* settingsManager;
 
-	void onMotorSpeedCommand(String value);
+	void onMotorSpeedCommand(const char * value, uint8_t valueLength);
 
-	void onGetPositionsCommand(String value);
+	void onGetPositionsCommand(const char * value, uint8_t valueLength);
 
-	void onGotoPositionCommand(String value);
+	void onGotoPositionCommand(const char * value, uint8_t valueLength);
 
-	void onSetPositionsCommand(String value);
+	void onSetPositionsCommand(const char * value, uint8_t valueLength);
 
-	void onSetSettingsCommand(String value);
+	void onSetSettingsCommand(const char * value, uint8_t valueLength);
 
-	void onGetSettingsCommand(String value);
+	void onGetSettingsCommand(const char * value, uint8_t valueLength);
 
-	void onResetSettingsCommand(String value);
+	void onResetSettingsCommand(const char * value, uint8_t valueLength);
 
-	void onGetDataCommand(String value);
+	void onGetDataCommand(const char * value, uint8_t valueLength);
 
-	uint8_t getNewPositionLength(String value);
+	uint8_t getNewPositionLength(const char * value, uint8_t valueLength);
 };
 
 #endif

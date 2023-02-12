@@ -10,10 +10,10 @@ class CockpitControlSettings
 
         bool settingsStored = false;
         bool autoSendData = false;
-        uint16_t defaultPos = 0;
-        uint16_t stepCount = 2;
+        uint8_t defaultPos = 0;
+        uint8_t stepCount = 2;
 
-        uint16_t *steps = new uint16_t[stepCount]{7, 15};
+        uint8_t *steps = new uint8_t[stepCount]{7, 15};
 
         const char*   settingsStoredAddress = "cockpit";
         const char*   autoSendDataAddress = "autoSendData";

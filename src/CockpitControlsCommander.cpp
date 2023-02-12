@@ -1,22 +1,22 @@
 #include "CockpitControlsCommander.h"
 
-extern String buildStepList(uint16_t *steps, uint16_t stepCount)
+extern const char * buildStepList(uint8_t *steps, uint8_t stepCount)
 {
 	String tValue = "";
 	for (size_t i = 0; i < stepCount; i++)
 	{
-		uint16_t distance = steps[i];
+		String distance = String(steps[i]);
 
-		if (i < (stepCount - 1))
+		if (i < (uint8_t)(stepCount - (uint8_t)i))
 		{
-			tValue += String(distance) + CommandValueSeparator;
+			tValue += distance + CommandValueSeparator;
 		}
 		else {
-			tValue += String(distance);
+			tValue += distance;
 		}
 	}
 
-	return tValue;
+	return tValue.c_str();
 }
 
 CockpitControlsCommander::CockpitControlsCommander(MotorManager *motorManager, InputManager *inputManager, SettingsManager* settingsManager) : Commander()
@@ -26,14 +26,14 @@ CockpitControlsCommander::CockpitControlsCommander(MotorManager *motorManager, I
 	this->settingsManager = settingsManager;
 }
 
-void CockpitControlsCommander::readCmd(char key, String data)
+void CockpitControlsCommander::readCmd(char key, const char * data, uint8_t valueLength)
 {        
 	switch (key)
 	{
 	case (char)CockpitControlsCommandKey::MOTORSPEED:
 		if (isConnected())
 		{
-			onMotorSpeedCommand(data);
+			onMotorSpeedCommand(data, valueLength);
 		}
 		break;
 
@@ -41,42 +41,42 @@ void CockpitControlsCommander::readCmd(char key, String data)
 
 		if (isConnected())
 		{
-			onGetPositionsCommand(data);
+			onGetPositionsCommand(data, valueLength);
 		}
 		break;
 
 	case (char)CockpitControlsCommandKey::SETPOSITIONS:
 		if (isConnected())
 		{
-			onSetPositionsCommand(data);
+			onSetPositionsCommand(data, valueLength);
 		}
 		break;
 
 	case (char)CockpitControlsCommandKey::GOTOPOSITION:
 		if (isConnected())
 		{
-			onGotoPositionCommand(data);
+			onGotoPositionCommand(data, valueLength);
 		}
 		break;
 
 	case (char)CockpitControlsCommandKey::DATA:
 		if (isConnected())
 		{
-			onGetDataCommand(data);
+			onGetDataCommand(data, valueLength);
 		}
 		break;
 
 	case (char)CockpitControlsCommandKey::SETSETTINGS:
 		if (isConnected())
 		{
-			onSetSettingsCommand(data);
+			onSetSettingsCommand(data, valueLength);
 		}
 		break;
 
 	case (char)CockpitControlsCommandKey::GETSETTINGS:
 		if (isConnected())
 		{
-			onGetSettingsCommand(data);
+			onGetSettingsCommand(data, valueLength);
 		}
 		break;
 
@@ -84,7 +84,7 @@ void CockpitControlsCommander::readCmd(char key, String data)
 	case (char)CockpitControlsCommandKey::RESETSETTINGS:
 		if (isConnected())
 		{
-			onResetSettingsCommand(data);
+			onResetSettingsCommand(data, valueLength);
 		}
 		break;
 	default:
@@ -93,21 +93,18 @@ void CockpitControlsCommander::readCmd(char key, String data)
 	}
 }
 
-void CockpitControlsCommander::onMotorSpeedCommand(String value)
+void CockpitControlsCommander::onMotorSpeedCommand(const char * value, uint8_t valueLength)
 {
-	motorManager->setSpeed(value.toInt());
-	serialCmd->writeCommand(CommandKey::RECEIVED, CommandToken);
+	motorManager->setSpeed(static_cast<unsigned int>( *value ));
+	serialCmd->writeCommand(CommandKey::RECEIVED, CommandToken.c_str());
 }
 
-void CockpitControlsCommander::onGetPositionsCommand(String value)
+void CockpitControlsCommander::onGetPositionsCommand(const char * value, uint8_t valueLength)
 {
-
-	String tValue = buildStepList(motorManager->getSteps(), motorManager->getStepCount());
-
-	serialCmd->writeCommand((char)CockpitControlsCommandKey::GETPOSITIONS, tValue);
+	serialCmd->writeCommand((char)CockpitControlsCommandKey::GETPOSITIONS, buildStepList(motorManager->getSteps(), motorManager->getStepCount()));
 }
 
-void CockpitControlsCommander::onGetDataCommand(String value)
+void CockpitControlsCommander::onGetDataCommand(const char * value, uint8_t valueLength)
 {
 	sendData();
 }
@@ -120,30 +117,30 @@ void CockpitControlsCommander::sendData()
 		String(motorManager->getSpeed()) + String(CommandValueSeparator) +
 		String(inputManager->GetButtonMode());
 
-	serialCmd->writeCommand((char)CockpitControlsCommandKey::DATA, data);
+	serialCmd->writeCommand((char)CockpitControlsCommandKey::DATA, data.c_str());
 }
 
-void CockpitControlsCommander::sendEvent(CockpitControlsEvents event, String eventData)
+void CockpitControlsCommander::sendEvent(CockpitControlsEvents event, const char * eventData)
 {
 	String data = String((uint8_t)event, DEC) + String(CommandValueSeparator) + eventData;
-	serialCmd->writeCommand((char)CockpitControlsCommandKey::EVENT, data);
+	serialCmd->writeCommand((char)CockpitControlsCommandKey::EVENT, data.c_str());
 }
 
-void CockpitControlsCommander::onGotoPositionCommand(String value)
+void CockpitControlsCommander::onGotoPositionCommand(const char *  value, uint8_t valueLength)
 {
-	motorManager->gotoPos(value.toInt());
-	serialCmd->writeCommand(CommandKey::RECEIVED, CommandToken);
+	motorManager->gotoPos(static_cast<unsigned int>( *value ));
+	serialCmd->writeCommand(CommandKey::RECEIVED, CommandToken.c_str());
 }
 
-void CockpitControlsCommander::onSetPositionsCommand(String value)
+void CockpitControlsCommander::onSetPositionsCommand(const char *  value, uint8_t valueLength)
 {
-	uint16_t newPosLength = getNewPositionLength(value);
+	uint8_t newPosLength = getNewPositionLength(value, valueLength);
 
-	uint16_t *newDistances = new uint16_t[newPosLength];
+	uint8_t *newDistances = new uint8_t[newPosLength];
 
 	for (size_t i = 1; i <= newPosLength; i++)
 	{
-		newDistances[i - 1] = getValue(value, CommandValueSeparator, i).toInt();
+		newDistances[i - 1] = getValue(value, valueLength, CommandValueSeparator, i).toInt();
 	}
 
 	CockpitControlSettings settings = this->settingsManager->loadSettings();
@@ -152,16 +149,14 @@ void CockpitControlsCommander::onSetPositionsCommand(String value)
 
 	CockpitControlSettings storedSettings = this->settingsManager->writeSettings(settings);
 	motorManager->setSteps(storedSettings.steps, storedSettings.stepCount);
-	// write back
-	String tValue = buildStepList(motorManager->getSteps(), motorManager->getStepCount());
 
-	serialCmd->writeCommand((char)CockpitControlsCommandKey::GETPOSITIONS, tValue);
+	serialCmd->writeCommand((char)CockpitControlsCommandKey::GETPOSITIONS, buildStepList(motorManager->getSteps(), motorManager->getStepCount()));
 }
 
-void CockpitControlsCommander::onSetSettingsCommand(String value)
+void CockpitControlsCommander::onSetSettingsCommand(const char *  value, uint8_t valueLength)
 {
-	bool autoSendData = getValue(value, CommandValueSeparator, 0).toInt() == 1 ? true : false;
-	uint8_t defaultPos = getValue(value, CommandValueSeparator, 1).toInt();
+	bool autoSendData = getValue(value, valueLength, CommandValueSeparator, 0).toInt() == 1 ? true : false;
+	uint8_t defaultPos = getValue(value, valueLength,  CommandValueSeparator, 1).toInt();
 
 	CockpitControlSettings settings = this->settingsManager->loadSettings();
 	settings.autoSendData = autoSendData;
@@ -170,27 +165,31 @@ void CockpitControlsCommander::onSetSettingsCommand(String value)
 	CockpitControlSettings storedSettings = this->settingsManager->writeSettings(settings);
 	motorManager->begin(storedSettings.steps, storedSettings.stepCount);
 	// write back
-	serialCmd->writeCommand(CommandKey::RECEIVED, CommandToken);
+	serialCmd->writeCommand(CommandKey::RECEIVED, CommandToken.c_str());
 }
 
-void CockpitControlsCommander::onGetSettingsCommand(String value)
+void CockpitControlsCommander::onGetSettingsCommand(const char *  value, uint8_t valueLength)
 {
 	CockpitControlSettings settings = this->settingsManager->loadSettings();
 	// write back
-	serialCmd->writeCommand((char)CockpitControlsCommandKey::GETSETTINGS, String(settings.autoSendData) + String(CommandValueSeparator) + String(settings.defaultPos));
+	char temp[3] = "";
+	temp[0] = settings.autoSendData;
+	temp[1] = CommandValueSeparator;
+	temp[2] = settings.defaultPos;
+	serialCmd->writeCommand((char)CockpitControlsCommandKey::GETSETTINGS, temp);
 }
 
-void CockpitControlsCommander::onResetSettingsCommand(String value)
+void CockpitControlsCommander::onResetSettingsCommand(const char *  value, uint8_t valueLength)
 {
 	// reset settings
 	CockpitControlSettings storedSettings = this->settingsManager->resetSettings();
 	motorManager->begin(storedSettings.steps, storedSettings.stepCount);
 	// write back
-	serialCmd->writeCommand(CommandKey::RECEIVED, CommandToken);
+	serialCmd->writeCommand(CommandKey::RECEIVED, CommandToken.c_str());
 }
 
 
-uint8_t CockpitControlsCommander::getNewPositionLength(String value)
+uint8_t CockpitControlsCommander::getNewPositionLength(const char *  value, uint8_t valueLength)
 {
-	return getValue(value, CommandValueSeparator, 0).toInt();
+	return getValue(value, valueLength, CommandValueSeparator, 0).toInt();
 }

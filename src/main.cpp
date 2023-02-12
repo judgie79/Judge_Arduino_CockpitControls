@@ -70,8 +70,8 @@ SonarDistanceDevice sonar(distanceTriggerPin, distanceEchoPin, 30);
 */
 #define backEndSensorPin 11 // the number of the pushbutton pin of the backend sensor
 #define frontEndSensorPin 7 // the number of the pushbutton pin of the front end sensor
-DirectionButtonSensor backEndSensor(0, "START", SensorType::Trigger, SensorTriggerType::Force, SensorTriggerDirection::Backward, backEndSensorPin, INPUT_PULLUP);
-DirectionButtonSensor frontEndSensor(1, "END", SensorType::Trigger, SensorTriggerType::Force, SensorTriggerDirection::Forward, frontEndSensorPin, INPUT_PULLUP);
+DirectionButtonSensor backEndSensor(0, SensorType::Trigger, SensorTriggerType::Force, SensorTriggerDirection::Backward, backEndSensorPin, INPUT_PULLUP);
+DirectionButtonSensor frontEndSensor(1, SensorType::Trigger, SensorTriggerType::Force, SensorTriggerDirection::Forward, frontEndSensorPin, INPUT_PULLUP);
 
 DirectionTriggerSensor **defaultSensors = new DirectionTriggerSensor *[2]
 {
@@ -126,7 +126,7 @@ CockpitControlsCommander commander(&mManager, &inputManager, &settingsManager);
 
 long lastDataSend = 0;
 
-void onPositionReached(uint16_t index);
+void onPositionReached(uint8_t index);
 void onSensorReached(DirectionTriggerSensor *sensor);
 
 void initPedalPosition()
@@ -186,10 +186,11 @@ void setup()
   LOGD_INFO("ready");
 }
 
-void onPositionReached(uint16_t index)
+void onPositionReached(uint8_t index)
 {
-  LOGD_INFO("pos reached");
-  commander.sendEvent(CockpitControlsEvents::POS_REACHED, String(index, DEC));
+  char eventData[3] = "";
+  sprintf(eventData, "%d", index);
+  commander.sendEvent(CockpitControlsEvents::POS_REACHED, eventData);
 }
 
 void onSensorReached(DirectionTriggerSensor *sensor)
@@ -198,13 +199,15 @@ void onSensorReached(DirectionTriggerSensor *sensor)
   {
     if (sensor->getTriggerType() == SensorTriggerType::Force)
     {
+      char eventData[3] = "";
+      sprintf(eventData, "%d", sensor->getId());
       if (sensor->getTriggerDirection() == SensorTriggerDirection::Forward)
       {
-        commander.sendEvent(CockpitControlsEvents::FRONT_REACHED, String(sensor->getId(), DEC));
+        commander.sendEvent(CockpitControlsEvents::FRONT_REACHED, eventData);
       }
       else if (sensor->getTriggerDirection() == SensorTriggerDirection::Backward)
       {
-        commander.sendEvent(CockpitControlsEvents::BACK_REACHED, String(sensor->getId(), DEC));
+        commander.sendEvent(CockpitControlsEvents::BACK_REACHED, eventData);
       }
     }
   }

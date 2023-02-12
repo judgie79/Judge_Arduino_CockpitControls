@@ -115,22 +115,24 @@ void InputManager::Read()
         }
     }
     if (pos1Button != nullptr) {
-
-        //pos1Button->read(false);
         if (pos1Button->wasReleased())
         {
             onPosButtonClick(0);
-            String data = String((uint8_t)CockpitControlsEvents::POS_CLICKED, DEC) + String(0);
+
+            char data[4] = "";
+            sprintf(data, "%d", (uint8_t)CockpitControlsEvents::POS_CLICKED);
+            data[3] = '0';
             this->serialCmd->writeCommand((char)CockpitControlsCommandKey::EVENT, data);
         }
     }
     if (pos2Button != nullptr) {
-
-      //  pos2Button->read(false);
         if (pos2Button->wasReleased())
         {
             onPosButtonClick(1);
-            String data = String((uint8_t)CockpitControlsEvents::POS_CLICKED, DEC) + String(1);
+
+            char data[4] = "";
+            sprintf(data, "%d", (uint8_t)CockpitControlsEvents::POS_CLICKED);
+            data[3] = '1';
             this->serialCmd->writeCommand((char)CockpitControlsCommandKey::EVENT, data);
         }
     }
@@ -142,7 +144,6 @@ void InputManager::onPosButtonClick(uint8_t pos)
 }
 void InputManager::onForwardBegin()
 {
-  this->serialCmd->debugPrintln("start forward");
   motorManager->forward(true);
 }
 void InputManager::onForward()
@@ -151,12 +152,10 @@ void InputManager::onForward()
 }
 void InputManager::onForwardEnd()
 {
-  this->serialCmd->debugPrintln("stop forward");
   motorManager->stop();
 }
 void InputManager::onReverseBegin()
 {
-  this->serialCmd->debugPrintln("start Reverse");
   motorManager->reverse(true);
 }
 void InputManager::onReverse()
@@ -165,6 +164,5 @@ void InputManager::onReverse()
 }
 void InputManager::onReverseEnd()
 {
-  this->serialCmd->debugPrintln("stop Reverse");
   motorManager->stop();
 }
